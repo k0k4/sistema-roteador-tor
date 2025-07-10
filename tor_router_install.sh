@@ -533,15 +533,29 @@ chmod +x "$SCRIPTS_DIR/setup_iptables.sh"
 
 log "Configurando serviços..."
 
+# Desmascarar serviços que podem estar mascarados
+log "Desmascarando serviços necessários..."
+systemctl unmask tor 2>/dev/null || true
+systemctl unmask hostapd 2>/dev/null || true
+systemctl unmask dnsmasq 2>/dev/null || true
+systemctl unmask systemd-networkd 2>/dev/null || true
+
+# Parar serviços antes de reconfigurar
+systemctl stop tor 2>/dev/null || true
+systemctl stop hostapd 2>/dev/null || true
+systemctl stop dnsmasq 2>/dev/null || true
+
 # Habilitar serviços
+log "Habilitando serviços..."
 systemctl enable tor
 systemctl enable hostapd
 systemctl enable dnsmasq
 systemctl enable systemd-networkd
 
 # Desabilitar NetworkManager para evitar conflitos
-systemctl disable NetworkManager
-systemctl stop NetworkManager
+log "Desabilitando NetworkManager..."
+systemctl disable NetworkManager 2>/dev/null || true
+systemctl stop NetworkManager 2>/dev/null || true
 
 # Configurar fail2ban
 cat > /etc/fail2ban/jail.local << 'EOF'
