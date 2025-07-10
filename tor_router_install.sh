@@ -83,6 +83,13 @@ apt upgrade -y
 # ============================================================================
 
 log "Instalando pacotes necessários..."
+
+# Primeiro, resolver conflitos de pacotes
+log "Resolvendo conflitos de dependências..."
+apt remove --purge -y iptables-persistent netfilter-persistent 2>/dev/null || true
+apt autoremove -y
+
+# Instalar pacotes essenciais sem conflitos
 apt install -y \
     tor \
     tor-geoipdb \
@@ -90,7 +97,6 @@ apt install -y \
     hostapd \
     dnsmasq \
     iptables \
-    iptables-persistent \
     bridge-utils \
     wireless-tools \
     wpasupplicant \
@@ -109,10 +115,16 @@ apt install -y \
     python3-psutil \
     python3-netifaces \
     systemd-timesyncd \
-    ntp \
     fail2ban \
-    ufw \
     macchanger
+
+# Configurar timesyncd em vez de ntp (mais moderno e sem conflitos)
+log "Configurando sincronização de tempo..."
+systemctl enable systemd-timesyncd
+systemctl start systemd-timesyncd
+
+# Configurar firewall manualmente em vez de ufw (evita conflitos)
+log "Configurando firewall básico..."
 
 # Instalar pacotes Python adicionais
 pip3 install --upgrade pip
@@ -589,15 +601,60 @@ EOF
 
 log "Aplicando configurações de segurança..."
 
-# Configurar UFW (firewall adicional)
-ufw --force reset
-ufw default deny incoming
-ufw default deny forward
-ufw default allow outgoing
-ufw allow ssh
-ufw allow 67:68/udp
-ufw allow 53
-ufw --force enable
+# Configurar firewall básico com iptables (sem ufw para evitar conflitos)
+log "Configurando firewall com iptables..."
+
+# Limpar regras existentes
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+
+# Políticas padrão
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+# Permitir loopback
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+
+# Permitir conexões estabelecidas
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Permitir SSH
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Permitir DHCP
+iptables -A INPUT -p udp --dport 67:68 -j ACCEPT
+
+# Permitir DNS
+iptables -A INPUT -p udp --dport 53 -j ACCEPT
+iptables -A INPUT -p tcp --dport 53 -j ACCEPT
+
+# Salvar regras iptables
+log "Salvando regras de firewall..."
+mkdir -p /etc/iptables
+iptables-save > /etc/iptables/rules.v4
+
+# Criar script para restaurar regras na inicialização
+cat > /etc/systemd/system/iptables-restore.service << 'EOF'
+[Unit]
+Description=Restore iptables rules
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/iptables-restore /etc/iptables/rules.v4
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable iptables-restore.service
 
 # Configurar kernel parameters para segurança
 cat >> /etc/sysctl.conf << 'EOF'
