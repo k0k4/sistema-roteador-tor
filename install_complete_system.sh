@@ -228,23 +228,33 @@ check_required_files() {
 customize_scripts() {
     header "=== PERSONALIZANDO SCRIPTS ==="
     
-    # Personalizar script de instalação principal
-    sed -i "s/WIFI_SSID=\".*\"/WIFI_SSID=\"$WIFI_SSID\"/" tor_router_install.sh
-    sed -i "s/WIFI_PASSWORD=\".*\"/WIFI_PASSWORD=\"$WIFI_PASSWORD\"/" tor_router_install.sh
-    sed -i "s/WIFI_CHANNEL=\".*\"/WIFI_CHANNEL=\"$WIFI_CHANNEL\"/" tor_router_install.sh
-    sed -i "s/INTERNAL_NETWORK=\".*\"/INTERNAL_NETWORK=\"$INTERNAL_NETWORK\"/" tor_router_install.sh
-    sed -i "s/GATEWAY_IP=\".*\"/GATEWAY_IP=\"$GATEWAY_IP\"/" tor_router_install.sh
-    sed -i "s/INTERNET_INTERFACE=\".*\"/INTERNET_INTERFACE=\"$INTERNET_INTERFACE\"/" tor_router_install.sh
-    sed -i "s/WIFI_INTERFACE=\".*\"/WIFI_INTERFACE=\"$WIFI_INTERFACE\"/" tor_router_install.sh
-    sed -i "s/LAN_INTERFACE=\".*\"/LAN_INTERFACE=\"$LAN_INTERFACE\"/" tor_router_install.sh
+    # Escapar caracteres especiais para sed
+    WIFI_SSID_ESC=$(printf '%s\n' "$WIFI_SSID" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    WIFI_PASSWORD_ESC=$(printf '%s\n' "$WIFI_PASSWORD" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    WIFI_CHANNEL_ESC=$(printf '%s\n' "$WIFI_CHANNEL" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    INTERNAL_NETWORK_ESC=$(printf '%s\n' "$INTERNAL_NETWORK" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    GATEWAY_IP_ESC=$(printf '%s\n' "$GATEWAY_IP" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    INTERNET_INTERFACE_ESC=$(printf '%s\n' "$INTERNET_INTERFACE" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    WIFI_INTERFACE_ESC=$(printf '%s\n' "$WIFI_INTERFACE" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    LAN_INTERFACE_ESC=$(printf '%s\n' "$LAN_INTERFACE" | sed 's/[[\.*^$()+?{|]/\\&/g')
+    
+    # Personalizar script de instalação principal usando delimitador |
+    sed -i "s|WIFI_SSID=\".*\"|WIFI_SSID=\"$WIFI_SSID_ESC\"|" tor_router_install.sh
+    sed -i "s|WIFI_PASSWORD=\".*\"|WIFI_PASSWORD=\"$WIFI_PASSWORD_ESC\"|" tor_router_install.sh
+    sed -i "s|WIFI_CHANNEL=\".*\"|WIFI_CHANNEL=\"$WIFI_CHANNEL_ESC\"|" tor_router_install.sh
+    sed -i "s|INTERNAL_NETWORK=\".*\"|INTERNAL_NETWORK=\"$INTERNAL_NETWORK_ESC\"|" tor_router_install.sh
+    sed -i "s|GATEWAY_IP=\".*\"|GATEWAY_IP=\"$GATEWAY_IP_ESC\"|" tor_router_install.sh
+    sed -i "s|INTERNET_INTERFACE=\".*\"|INTERNET_INTERFACE=\"$INTERNET_INTERFACE_ESC\"|" tor_router_install.sh
+    sed -i "s|WIFI_INTERFACE=\".*\"|WIFI_INTERFACE=\"$WIFI_INTERFACE_ESC\"|" tor_router_install.sh
+    sed -i "s|LAN_INTERFACE=\".*\"|LAN_INTERFACE=\"$LAN_INTERFACE_ESC\"|" tor_router_install.sh
     
     # Personalizar outros scripts conforme necessário
     for script in tor_monitor.py tor_auto_reconnect.sh security_checker.py; do
         if [[ -f "$script" ]]; then
-            sed -i "s/'wifi_interface': 'wlan0'/'wifi_interface': '$WIFI_INTERFACE'/" "$script" 2>/dev/null || true
-            sed -i "s/'lan_interface': 'eth1'/'lan_interface': '$LAN_INTERFACE'/" "$script" 2>/dev/null || true
-            sed -i "s/'internet_interface': 'eth0'/'internet_interface': '$INTERNET_INTERFACE'/" "$script" 2>/dev/null || true
-            sed -i "s/'gateway_ip': '192.168.100.1'/'gateway_ip': '$GATEWAY_IP'/" "$script" 2>/dev/null || true
+            sed -i "s|'wifi_interface': 'wlan0'|'wifi_interface': '$WIFI_INTERFACE_ESC'|" "$script" 2>/dev/null || true
+            sed -i "s|'lan_interface': 'eth1'|'lan_interface': '$LAN_INTERFACE_ESC'|" "$script" 2>/dev/null || true
+            sed -i "s|'internet_interface': 'eth0'|'internet_interface': '$INTERNET_INTERFACE_ESC'|" "$script" 2>/dev/null || true
+            sed -i "s|'gateway_ip': '192.168.100.1'|'gateway_ip': '$GATEWAY_IP_ESC'|" "$script" 2>/dev/null || true
         fi
     done
     
