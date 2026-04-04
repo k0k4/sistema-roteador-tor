@@ -1,6 +1,23 @@
 # 🛡️ Sistema Roteador TOR Completo
 
-**Transforme seu computador Linux em um roteador TOR seguro para toda sua casa!**
+**Transforme seu Kali Linux em um roteador TOR seguro com dashboard web de gestão.**
+
+## ⚡ Início Rápido (Kali Linux)
+
+```bash
+git clone https://github.com/k0k4/sistema-roteador-tor.git
+cd sistema-roteador-tor
+chmod +x install_complete_system.sh
+sudo ./install_complete_system.sh
+```
+
+Depois da instalação, acesse o dashboard em:
+
+- `http://192.168.10.1/`
+- `http://192.168.20.1/`
+- `http://192.168.30.1/`
+
+> Se você estiver usando o modo legado do projeto, o painel pode estar em `http://192.168.100.1:8080`.
 
 ## 🚀 Instalação Rápida
 
@@ -13,10 +30,10 @@
 ### Instalação Automática (Recomendado)
 
 ```bash
-# 1. Baixar todos os arquivos para um diretório
-mkdir ~/tor_router && cd ~/tor_router
+# 1. Entrar na pasta do projeto
+cd sistema-roteador-tor
 
-# 2. Executar instalação completa
+# 2. Executar instalação completa como root
 sudo chmod +x install_complete_system.sh
 sudo ./install_complete_system.sh
 ```
@@ -96,13 +113,18 @@ sudo reboot
 
 ## 🖥️ Interface Web
 
-Acesse `http://192.168.100.1:8080` para:
+Acesse a interface web para:
 
 - **Dashboard**: Status em tempo real
 - **Segurança**: Verificações de vazamentos
 - **Performance**: Testes de velocidade
 - **Estatísticas**: Histórico e métricas
 - **Controles**: Reconexão manual e configurações
+
+### Endereços de acesso
+
+- Modo multi-rede (recomendado): `http://192.168.10.1/`, `http://192.168.20.1/`, `http://192.168.30.1/`
+- Modo legado: `http://192.168.100.1:8080`
 
 ## 📱 Comandos Úteis
 
@@ -323,4 +345,3 @@ Após a instalação, seu roteador TOR estará funcionando automaticamente. Cone
 ---
 
 **Desenvolvido por Manus AI** | **Versão 1.0** | **Janeiro 2025**
-
