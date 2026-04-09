@@ -387,6 +387,74 @@ function wan_state(): string {
     return file_exists($f) ? trim(file_get_contents($f)) : 'unknown';
 }
 
+function wifi_ap_status(): array {
+    $manager = '/usr/local/bin/tor-router.d/wifi_ap_manager.sh';
+    $ifaces = [];
+    foreach (glob('/sys/class/net/*') ?: [] as $path) {
+        $iface = basename($path);
+        if (is_dir("$path/wireless")) {
+            $ifaces[] = $iface;
+        }
+    }
+    sort($ifaces);
+
+    exec("ip -4 route show default 2>/dev/null", $routeOut);
+    $wanInUse = [];
+    foreach ($routeOut as $line) {
+        if (preg_match('/\bdev\s+(\S+)/', $line, $m)) {
+            $wanInUse[$m[1]] = true;
+        }
+    }
+
+    $interfaces = [];
+    foreach ($ifaces as $iface) {
+        $interfaces[] = [
+            'name' => $iface,
+            'used_as_wan' => isset($wanInUse[$iface]),
+            'available' => !isset($wanInUse[$iface]),
+        ];
+    }
+
+    $status = [
+        'running' => false,
+        'interfaces' => $interfaces,
+    ];
+
+    $stateFile = '/run/tor-router/wifi-ap.state';
+    if (is_readable($stateFile)) {
+        $raw = file($stateFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        $kv = [];
+        foreach ($raw as $line) {
+            if (!str_contains($line, '=')) continue;
+            [$k, $v] = explode('=', $line, 2);
+            $kv[trim($k)] = trim($v);
+        }
+        if (($kv['running'] ?? '') === '1') {
+            $status['running'] = true;
+            $status['iface'] = $kv['iface'] ?? '';
+            $status['ssid'] = $kv['ssid'] ?? '';
+            $status['route_profile'] = $kv['route'] ?? '';
+            $status['subnet'] = $kv['subnet'] ?? '';
+            $status['gateway'] = $kv['gateway'] ?? '';
+        }
+    }
+
+    if (is_executable($manager)) {
+        exec("sudo " . escapeshellarg($manager) . " status 2>/dev/null", $mgrOut, $mgrRc);
+        if ($mgrRc === 0) {
+            foreach ($mgrOut as $line) {
+                if (!str_contains($line, '=')) continue;
+                [$k, $v] = explode('=', $line, 2);
+                if (trim($k) === 'processes_ok') {
+                    $status['processes_ok'] = (trim($v) === '1');
+                }
+            }
+        }
+    }
+
+    return $status;
+}
+
 function vpn_profiles(): array {
     $dir = '/etc/tor-router/vpn';
     if (!is_dir($dir)) return [];
@@ -430,6 +498,7 @@ $response = [
     'clients'     => dhcp_clients(),
     'pihole'      => pihole_stats(),
     'wan_state'   => wan_state(),
+    'wifi_ap'     => wifi_ap_status(),
     'recent_logs' => recent_logs(),
     'timestamp'   => time(),
 ];

@@ -86,6 +86,22 @@ const I18N = {
       load: 'Load',
       applyAfterSave: 'Apply after save:',
       saveConfig: 'Save Config'
+      ,wifiApRouter: 'Wi-Fi SSID Router'
+      ,wifiInterface: 'Wi-Fi interface:'
+      ,autoSelect: 'Auto-select available'
+      ,routeProfile: 'Route profile:'
+      ,route10: '192.168.10.x (normal)'
+      ,route20: '192.168.20.x (Tor)'
+      ,route30: '192.168.30.x (Tor)'
+      ,ssidName: 'SSID name:'
+      ,wifiPassword: 'Wi-Fi password:'
+      ,startWifiAp: 'Start SSID'
+      ,stopWifiAp: 'Stop SSID'
+      ,wifiApStatusIdle: 'SSID service is stopped.'
+      ,wifiApRunning: 'Running on {iface} • SSID "{ssid}" • profile {route} • {subnet}'
+      ,pentestToolkit: 'Pentest Toolkit'
+      ,pentestDesc: 'Wi-Fi security audit: network scanner, traffic auditor, device fingerprinting'
+      ,openPentest: 'Open Pentest Toolkit'
     },
     geoUnavailable: 'Location unavailable.',
     unknown: 'Unknown',
@@ -104,6 +120,11 @@ const I18N = {
       uploadFirst: '✗ Select a file first.',
       diagRunning: '⏳ Running diagnostics...',
       diagDone: '✓ Diagnostics completed.',
+      wifiSsidRequired: '✗ Enter SSID (1..32 chars).',
+      wifiPasswordRequired: '✗ Enter Wi-Fi password (8..63 chars).',
+      wifiStarting: '⏳ Starting Wi-Fi SSID...',
+      wifiStopping: '⏳ Stopping Wi-Fi SSID...',
+      wifiNoIface: '✗ No Wi-Fi interface available for AP (in use as WAN).',
     }
   },
   pt: {
@@ -172,6 +193,22 @@ const I18N = {
       load: 'Carregar',
       applyAfterSave: 'Aplicar após salvar:',
       saveConfig: 'Salvar Configuração'
+      ,wifiApRouter: 'Roteador SSID Wi-Fi'
+      ,wifiInterface: 'Interface Wi-Fi:'
+      ,autoSelect: 'Selecionar automaticamente disponível'
+      ,routeProfile: 'Perfil de rota:'
+      ,route10: '192.168.10.x (normal)'
+      ,route20: '192.168.20.x (Tor)'
+      ,route30: '192.168.30.x (Tor)'
+      ,ssidName: 'Nome do SSID:'
+      ,wifiPassword: 'Senha do Wi-Fi:'
+      ,startWifiAp: 'Iniciar SSID'
+      ,stopWifiAp: 'Parar SSID'
+      ,wifiApStatusIdle: 'Serviço SSID está parado.'
+      ,wifiApRunning: 'Rodando em {iface} • SSID "{ssid}" • perfil {route} • {subnet}'
+      ,pentestToolkit: 'Kit de Pentest'
+      ,pentestDesc: 'Auditoria de segurança Wi-Fi: scanner de rede, auditor de tráfego, fingerprinting'
+      ,openPentest: 'Abrir Kit de Pentest'
     },
     geoUnavailable: 'Localização indisponível.',
     unknown: 'Desconhecido',
@@ -190,6 +227,11 @@ const I18N = {
       uploadFirst: '✗ Selecione um arquivo primeiro.',
       diagRunning: '⏳ Executando diagnóstico...',
       diagDone: '✓ Diagnóstico concluído.',
+      wifiSsidRequired: '✗ Informe o SSID (1..32 caracteres).',
+      wifiPasswordRequired: '✗ Informe a senha Wi-Fi (8..63 caracteres).',
+      wifiStarting: '⏳ Iniciando SSID Wi-Fi...',
+      wifiStopping: '⏳ Parando SSID Wi-Fi...',
+      wifiNoIface: '✗ Nenhuma interface Wi-Fi disponível para AP (em uso como WAN).',
     }
   }
 };
@@ -329,6 +371,46 @@ function renderClients(clients = { leases: [] }) {
   }
 }
 
+function renderWifiAp(wifi = {}) {
+  const ifaceSel = document.getElementById('wifi-ap-iface');
+  const statusEl = document.getElementById('wifi-ap-status');
+  if (!ifaceSel || !statusEl) return;
+
+  const previous = ifaceSel.value;
+  ifaceSel.innerHTML = `<option value="">${t('ui.autoSelect')}</option>`;
+  const interfaces = Array.isArray(wifi.interfaces) ? wifi.interfaces : [];
+  let availableCount = 0;
+
+  interfaces.forEach((i) => {
+    const opt = document.createElement('option');
+    opt.value = i.name;
+    const suffix = i.available ? '' : ' (WAN)';
+    opt.textContent = `${i.name}${suffix}`;
+    opt.disabled = !i.available;
+    if (i.available) availableCount += 1;
+    ifaceSel.appendChild(opt);
+  });
+
+  if (previous && [...ifaceSel.options].some((o) => o.value === previous)) {
+    ifaceSel.value = previous;
+  }
+
+  ifaceSel.disabled = availableCount === 0;
+
+  if (wifi.running) {
+    statusEl.textContent = t('ui.wifiApRunning', {
+      iface: wifi.iface || '?',
+      ssid: wifi.ssid || '?',
+      route: wifi.route_profile || '?',
+      subnet: wifi.subnet || '?',
+    });
+  } else if (availableCount === 0) {
+    statusEl.textContent = t('feedback.wifiNoIface');
+  } else {
+    statusEl.textContent = t('ui.wifiApStatusIdle');
+  }
+}
+
 function updateGeoMap(geo = {}) {
   const meta = document.getElementById('geoip-meta');
   const frame = document.getElementById('geoip-map-frame');
@@ -424,6 +506,7 @@ async function refreshStatus() {
   renderServices(data.service_details || {});
   renderInterfaces(data.network || {}, data.interfaces || {});
   renderClients(data.clients || { leases: [] });
+  renderWifiAp(data.wifi_ap || {});
   updateGeoMap(data.tor_exit_geoip || {});
 }
 
@@ -522,6 +605,28 @@ document.getElementById('btn-vpn-upload').addEventListener('click', async () => 
   const r = await res.json();
   feedback('vpn-feedback', r.ok ? `✓ ${r.message}` : `✗ ${r.message}`, !r.ok);
   if (r.ok) fileInput.value = '';
+});
+
+document.getElementById('btn-wifi-ap-start').addEventListener('click', async () => {
+  const ssid = (document.getElementById('wifi-ap-ssid')?.value || '').trim();
+  const password = document.getElementById('wifi-ap-password')?.value || '';
+  const route_profile = document.getElementById('wifi-ap-route')?.value || '10';
+  const interfaceName = document.getElementById('wifi-ap-iface')?.value || '';
+
+  if (!ssid || ssid.length > 32) return feedback('wifi-ap-feedback', t('feedback.wifiSsidRequired'), true);
+  if (password.length < 8 || password.length > 63) return feedback('wifi-ap-feedback', t('feedback.wifiPasswordRequired'), true);
+
+  feedback('wifi-ap-feedback', t('feedback.wifiStarting'));
+  const r = await controlAction('wifi_ap_start', { ssid, password, route_profile, interface: interfaceName });
+  feedback('wifi-ap-feedback', r.ok ? `✓ ${r.message}` : `✗ ${r.message}`, !r.ok);
+  if (r.ok) setTimeout(refreshStatus, 1500);
+});
+
+document.getElementById('btn-wifi-ap-stop').addEventListener('click', async () => {
+  feedback('wifi-ap-feedback', t('feedback.wifiStopping'));
+  const r = await controlAction('wifi_ap_stop');
+  feedback('wifi-ap-feedback', r.ok ? `✓ ${r.message}` : `✗ ${r.message}`, !r.ok);
+  if (r.ok) setTimeout(refreshStatus, 1200);
 });
 
 document.getElementById('btn-load-logs').addEventListener('click', async () => {

@@ -157,6 +157,38 @@
 
   <section class="grid-2">
     <div class="card">
+      <h2 data-i18n="ui.wifiApRouter">Wi-Fi SSID Router</h2>
+      <div class="vpn-row">
+        <label><span data-i18n="ui.wifiInterface">Wi-Fi interface:</span>
+          <select id="wifi-ap-iface">
+            <option value="" data-i18n="ui.autoSelect">Auto-select available</option>
+          </select>
+        </label>
+        <label><span data-i18n="ui.routeProfile">Route profile:</span>
+          <select id="wifi-ap-route">
+            <option value="10" data-i18n="ui.route10">192.168.10.x (normal)</option>
+            <option value="20" data-i18n="ui.route20">192.168.20.x (Tor)</option>
+            <option value="30" data-i18n="ui.route30">192.168.30.x (Tor)</option>
+          </select>
+        </label>
+      </div>
+      <div class="vpn-row">
+        <label><span data-i18n="ui.ssidName">SSID name:</span>
+          <input type="text" id="wifi-ap-ssid" maxlength="32" placeholder="TorRouterWiFi">
+        </label>
+        <label><span data-i18n="ui.wifiPassword">Wi-Fi password:</span>
+          <input type="password" id="wifi-ap-password" minlength="8" maxlength="63" placeholder="min 8 chars">
+        </label>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-wifi-ap-start" data-i18n="ui.startWifiAp">Start SSID</button>
+        <button class="btn btn-danger" id="btn-wifi-ap-stop" data-i18n="ui.stopWifiAp">Stop SSID</button>
+      </div>
+      <p class="hint" id="wifi-ap-status" data-i18n="ui.wifiApStatusIdle">SSID service is stopped.</p>
+      <p class="feedback" id="wifi-ap-feedback"></p>
+    </div>
+
+    <div class="card">
       <h2 data-i18n="ui.wanManagement">WAN Management</h2>
       <label><span data-i18n="ui.primaryWan">Primary WAN:</span>
         <select id="wan-select">
@@ -238,6 +270,17 @@
         <button class="btn btn-primary" id="btn-config-save" data-i18n="ui.saveConfig">Save Config</button>
       </div>
       <p class="feedback" id="config-feedback"></p>
+    </div>
+  </section>
+
+  <!-- Pentest Toolkit Link -->
+  <section>
+    <div class="card" style="text-align:center">
+      <h2>🛡️ <span data-i18n="ui.pentestToolkit">Pentest Toolkit</span></h2>
+      <p class="hint" data-i18n="ui.pentestDesc">Wi-Fi security audit: network scanner, traffic auditor, device fingerprinting</p>
+      <a href="/pentest/" target="_blank" class="btn btn-primary" style="margin-top:10px;font-size:1rem;padding:10px 30px">
+        🛡️ <span data-i18n="ui.openPentest">Open Pentest Toolkit</span>
+      </a>
     </div>
   </section>
 

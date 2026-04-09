@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 
 $SCRIPTS = '/usr/local/bin/tor-router.d';
 $TOR_ROUTER = '/usr/local/bin/tor-router';
+$WIFI_AP_MANAGER = '/usr/local/bin/tor-router.d/wifi_ap_manager.sh';
 
 $SERVICE_UNITS = [
     'tor'          => 'tor@default',
@@ -58,6 +59,23 @@ function read_body(): array {
         return json_decode(file_get_contents('php://input'), true) ?? [];
     }
     return $_POST ?: [];
+}
+
+function wifi_iface_candidates(string $manager): array {
+    [$ok, $out] = run_cmd("sudo " . escapeshellarg($manager) . " list");
+    if (!$ok || $out === '') return [];
+    $rows = preg_split('/\r?\n/', trim($out));
+    $items = [];
+    foreach ($rows as $row) {
+        $parts = explode('|', trim($row));
+        if (count($parts) < 3) continue;
+        $items[] = [
+            'iface' => $parts[0],
+            'available' => ($parts[1] === '1'),
+            'reason' => $parts[2],
+        ];
+    }
+    return $items;
 }
 
 // Only accept POST
@@ -189,6 +207,69 @@ switch ($action) {
         }
         [$ok, $msg] = run_cmd("sudo $SCRIPTS/wan_manager.sh set-primary " . escapeshellarg($iface));
         json_response($ok, $msg ?: ($ok ? "Primary WAN set to $iface." : 'Failed.'));
+        break;
+
+    // ---- Wi-Fi AP router ----
+    case 'wifi_ap_start':
+        $ssid = trim((string)($body['ssid'] ?? ''));
+        $password = (string)($body['password'] ?? '');
+        $routeProfile = (string)($body['route_profile'] ?? '');
+        $ifaceRequested = trim((string)($body['interface'] ?? ''));
+
+        if ($ssid === '' || strlen($ssid) > 32) {
+            json_response(false, 'SSID must be 1..32 characters.');
+        }
+        if (strlen($password) < 8 || strlen($password) > 63) {
+            json_response(false, 'Wi-Fi password must be 8..63 characters.');
+        }
+        if (!in_array($routeProfile, ['10', '20', '30'], true)) {
+            json_response(false, 'Invalid route profile. Use 10, 20 or 30.');
+        }
+
+        $candidates = wifi_iface_candidates($WIFI_AP_MANAGER);
+        if (empty($candidates)) {
+            json_response(false, 'No Wi-Fi interfaces detected.');
+        }
+
+        $selected = '';
+        if ($ifaceRequested !== '') {
+            foreach ($candidates as $c) {
+                if ($c['iface'] === $ifaceRequested) {
+                    if (!$c['available']) {
+                        json_response(false, "Interface '$ifaceRequested' is not available ({$c['reason']}).");
+                    }
+                    $selected = $ifaceRequested;
+                    break;
+                }
+            }
+            if ($selected === '') {
+                json_response(false, "Interface '$ifaceRequested' not found.");
+            }
+        } else {
+            foreach ($candidates as $c) {
+                if ($c['available']) {
+                    $selected = $c['iface'];
+                    break;
+                }
+            }
+        }
+
+        if ($selected === '') {
+            json_response(false, 'No available Wi-Fi interface (all in WAN use).');
+        }
+
+        $cmd = "sudo " . escapeshellarg($WIFI_AP_MANAGER)
+             . " start " . escapeshellarg($selected)
+             . " " . escapeshellarg($ssid)
+             . " " . escapeshellarg($password)
+             . " " . escapeshellarg($routeProfile);
+        [$ok, $msg] = run_cmd($cmd);
+        json_response($ok, $ok ? "Wi-Fi AP started on $selected (profile $routeProfile)." : ($msg ?: 'Failed starting Wi-Fi AP.'), ['output' => $msg, 'interface' => $selected]);
+        break;
+
+    case 'wifi_ap_stop':
+        [$ok, $msg] = run_cmd("sudo " . escapeshellarg($WIFI_AP_MANAGER) . " stop");
+        json_response($ok, $ok ? 'Wi-Fi AP stopped.' : ($msg ?: 'Failed stopping Wi-Fi AP.'), ['output' => $msg]);
         break;
 
     // ---- Firewall: reload ----
