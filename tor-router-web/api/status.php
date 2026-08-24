@@ -39,21 +39,68 @@ function vpn_status(): array {
 }
 
 function tor_exit_ip(): string {
-    // Query via SOCKS5 proxy with a short timeout
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL            => 'https://api.ipify.org?format=json',
-        CURLOPT_PROXY          => 'socks5h://127.0.0.1:9050',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 15,
-        CURLOPT_CONNECTTIMEOUT => 10,
-    ]);
-    $res = curl_exec($ch);
-    $err = curl_error($ch);
-    curl_close($ch);
-    if ($res && !$err) {
-        $data = json_decode($res, true);
-        return $data['ip'] ?? 'unknown';
+    $cacheFile = '/run/tor-router/tor-exit-ip.cache';
+    $maxAgeSec = 120;
+
+    $readCache = function() use ($cacheFile): ?array {
+        if (!is_readable($cacheFile)) return null;
+        $raw = @file_get_contents($cacheFile);
+        if (!$raw) return null;
+        $obj = json_decode($raw, true);
+        return is_array($obj) ? $obj : null;
+    };
+
+    $writeCache = function(array $data) use ($cacheFile): void {
+        @mkdir('/run/tor-router', 0755, true);
+        @file_put_contents($cacheFile, json_encode($data));
+    };
+
+    $fetchLive = function() use ($writeCache): ?string {
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => 'https://api.ipify.org?format=json',
+            CURLOPT_PROXY          => 'socks5h://127.0.0.1:9050',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_CONNECTTIMEOUT => 3,
+        ]);
+        $res = curl_exec($ch);
+        curl_close($ch);
+        if ($res) {
+            $data = json_decode($res, true);
+            $ip = $data['ip'] ?? null;
+            if ($ip) {
+                $writeCache([
+                    'ip'        => $ip,
+                    'timestamp' => date('c'),
+                    'source'    => 'ipify',
+                ]);
+                return $ip;
+            }
+        }
+        return null;
+    };
+
+    $cached = $readCache();
+    if (is_array($cached) && !empty($cached['ip'])) {
+        $ts = strtotime($cached['timestamp'] ?? '0');
+        $age = ($ts === false) ? PHP_INT_MAX : (time() - $ts);
+        if ($age < $maxAgeSec) {
+            return $cached['ip'];
+        }
+        // Cache is stale: try a fast live fetch first
+        $live = $fetchLive();
+        if ($live !== null) {
+            return $live;
+        }
+        // Fallback to stale cache rather than showing unavailable
+        return $cached['ip'];
+    }
+
+    // No cache: fetch live with longer timeout
+    $live = $fetchLive();
+    if ($live !== null) {
+        return $live;
     }
     return 'unavailable';
 }
@@ -69,50 +116,44 @@ function tor_exit_geoip(string $ip): array {
         return is_array($obj) ? $obj : null;
     };
 
-    $writeCache = function(array $geo) use ($cacheFile): void {
-        @mkdir('/run/tor-router', 0755, true);
-        @file_put_contents($cacheFile, json_encode($geo));
-    };
-
-    if ($ip === '' || $ip === 'unavailable' || $ip === 'unknown') {
-        $cached = $readCache();
-        if (is_array($cached) && ($cached['available'] ?? false)) {
-            $cached['cached'] = true;
+    // Always prefer the background-updated cache; never block the dashboard.
+    $cached = $readCache();
+    if (is_array($cached) && ($cached['available'] ?? false)) {
+        // If the cached IP matches the current exit IP, return it fresh.
+        // Otherwise still return the cached geo (it will update on next timer run).
+        if (($cached['ip'] ?? '') === $ip) {
             return $cached;
         }
+        $cached['cached'] = true;
+        $cached['note'] = 'IP changed since last geo lookup';
+        return $cached;
+    }
+
+    if ($ip === '' || $ip === 'unavailable' || $ip === 'unknown') {
         return ['available' => false];
     }
 
+    // Last-resort synchronous lookup only when no cache exists at all.
     $url = 'https://ipwho.is/' . rawurlencode($ip);
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL            => $url,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 8,
-        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => 4,
+        CURLOPT_CONNECTTIMEOUT => 2,
     ]);
     $res = curl_exec($ch);
     curl_close($ch);
     if (!$res) {
-        $cached = $readCache();
-        if (is_array($cached) && ($cached['available'] ?? false) && ($cached['ip'] ?? '') === $ip) {
-            $cached['cached'] = true;
-            return $cached;
-        }
         return ['available' => false, 'ip' => $ip];
     }
 
     $data = json_decode($res, true);
     if (!is_array($data) || !($data['success'] ?? false)) {
-        $cached = $readCache();
-        if (is_array($cached) && ($cached['available'] ?? false) && ($cached['ip'] ?? '') === $ip) {
-            $cached['cached'] = true;
-            return $cached;
-        }
         return ['available' => false, 'ip' => $ip];
     }
 
-    $geo = [
+    return [
         'available'  => true,
         'ip'         => $ip,
         'country'    => $data['country'] ?? '',
@@ -124,8 +165,6 @@ function tor_exit_geoip(string $ip): array {
         'org'        => $data['connection']['org'] ?? '',
         'asn'        => $data['connection']['asn'] ?? '',
     ];
-    $writeCache($geo);
-    return $geo;
 }
 
 function tor_rotation_interval(): int {
@@ -172,7 +211,7 @@ function tor_bootstrap(): array {
 function cpu_usage(): float {
     // Read two samples of /proc/stat for accurate CPU %
     $stat1 = file('/proc/stat')[0];
-    usleep(200000); // 200ms sample
+    usleep(100000); // 100ms sample
     $stat2 = file('/proc/stat')[0];
 
     $parse = function(string $line): array {
@@ -462,6 +501,36 @@ function vpn_profiles(): array {
     return array_map('basename', $files);
 }
 
+function bypass_list(): array {
+    $file = '/etc/tor-router/bypass.list';
+    $entries = [];
+    if (is_readable($file)) {
+        foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '#')) continue;
+            $entries[] = $line;
+        }
+    }
+
+    $activeIps = [];
+    $ipsetOutput = [];
+    $ipsetRc = -1;
+    exec("sudo /sbin/ipset list tor-bypass-v4 2>/dev/null", $ipsetOutput, $ipsetRc);
+    if ($ipsetRc === 0) {
+        foreach ($ipsetOutput as $line) {
+            if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/', $line)) {
+                $activeIps[] = trim($line);
+            }
+        }
+    }
+
+    return [
+        'entries'    => $entries,
+        'active_ips' => array_values(array_unique($activeIps)),
+        'count'      => count($entries),
+    ];
+}
+
 // === Build response ===
 $exitIp = tor_exit_ip();
 $response = [
@@ -471,6 +540,8 @@ $response = [
         'nginx'    => service_status('nginx'),
         'pihole'   => service_status('pihole-FTL'),
         'openvpn'  => service_status('openvpn'),
+        'hostapd'  => service_status('hostapd'),
+        'pentest'  => service_status('trs-pentest'),
     ],
     'service_details' => [
         'tor'         => service_details('tor@default'),
@@ -482,6 +553,8 @@ $response = [
         'wan_failover'=> service_details('wan-failover'),
         'router'      => service_details('tor-router'),
         'ssh'         => service_details('ssh'),
+        'hostapd'     => service_details('hostapd'),
+        'pentest'     => service_details('trs-pentest'),
     ],
     'vpn'         => vpn_status(),
     'vpn_profiles'=> vpn_profiles(),
@@ -499,6 +572,7 @@ $response = [
     'pihole'      => pihole_stats(),
     'wan_state'   => wan_state(),
     'wifi_ap'     => wifi_ap_status(),
+    'bypass_list' => bypass_list(),
     'recent_logs' => recent_logs(),
     'timestamp'   => time(),
 ];

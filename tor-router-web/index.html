@@ -7,284 +7,470 @@
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<header>
-  <div class="header-inner">
-    <span class="logo">🔒 Tor Security Router | https://ia.mundix.dev | Lucieliton Mundim | @mundix.cli</span>
-    <div class="header-tools">
-      <button class="lang-btn" id="lang-en" title="English (US)" data-i18n-title="ui.langEnTitle">🇺🇸</button>
-      <button class="lang-btn" id="lang-pt" title="Português (Brasil)" data-i18n-title="ui.langPtTitle">🇧🇷</button>
-      <span id="clock"></span>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-icon">🔒</span>
+    <div>
+      <div class="brand-title">Tor Router</div>
+      <div class="brand-subtitle">Security Gateway</div>
     </div>
   </div>
-</header>
 
-<main>
-  <section class="grid-4">
-    <div class="card stat-card">
-      <h2 data-i18n="ui.torExitIp">Tor Exit IP</h2>
-      <div class="big-value" id="tor-exit-ip">—</div>
-    </div>
-    <div class="card stat-card">
-      <h2 data-i18n="ui.torBootstrap">Tor Bootstrap</h2>
-      <div class="big-value" id="tor-bootstrap">—</div>
-      <p class="hint" id="tor-bootstrap-phase"></p>
-    </div>
-    <div class="card stat-card">
-      <h2 data-i18n="ui.wanState">WAN State</h2>
-      <div class="big-value" id="wan-state">—</div>
-      <p class="hint" id="wan-hint"></p>
-    </div>
-    <div class="card stat-card">
-      <h2 data-i18n="ui.uptime">Uptime</h2>
-      <div class="big-value" id="sys-uptime">—</div>
-      <p class="hint" id="sys-hostname"></p>
-    </div>
-  </section>
+  <nav class="sidebar-nav">
+    <a href="#overview" class="nav-item active" data-section="overview">
+      <span class="nav-icon">📊</span><span data-i18n="nav.overview">Overview</span>
+    </a>
+    <a href="#tor" class="nav-item" data-section="tor">
+      <span class="nav-icon">🧅</span><span data-i18n="nav.tor">Tor</span>
+    </a>
+    <a href="#network" class="nav-item" data-section="network">
+      <span class="nav-icon">🌐</span><span data-i18n="nav.network">Network</span>
+    </a>
+    <a href="#services" class="nav-item" data-section="services">
+      <span class="nav-icon">⚙️</span><span data-i18n="nav.services">Services</span>
+    </a>
+    <a href="#wifi" class="nav-item" data-section="wifi">
+      <span class="nav-icon">📡</span><span data-i18n="nav.wifi">Wi-Fi AP</span>
+    </a>
+    <a href="#vpn" class="nav-item" data-section="vpn">
+      <span class="nav-icon">🔐</span><span data-i18n="nav.vpn">VPN</span>
+    </a>
+    <a href="#bypass" class="nav-item" data-section="bypass">
+      <span class="nav-icon">🌐</span><span data-i18n="nav.bypass">Bypass</span>
+    </a>
+    <a href="#logs" class="nav-item" data-section="logs">
+      <span class="nav-icon">📜</span><span data-i18n="nav.logs">Logs</span>
+    </a>
+    <a href="#config" class="nav-item" data-section="config">
+      <span class="nav-icon">📝</span><span data-i18n="nav.config">Config</span>
+    </a>
+    <a href="#pentest" class="nav-item" data-section="pentest">
+      <span class="nav-icon">🛡️</span><span data-i18n="nav.pentest">Wi-Fi Audit</span>
+    </a>
+  </nav>
 
-  <section>
-    <div class="card">
-      <h2 data-i18n="ui.torRotation">Tor IP Rotation Interval</h2>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.current">Current:</span>
-          <input id="tor-rotation-current" type="text" readonly value="—">
-        </label>
-        <label><span data-i18n="ui.setInterval">Set interval (seconds):</span>
-          <input id="tor-rotation-seconds" type="number" min="10" max="86400" step="10" value="600">
-        </label>
-        <button class="btn btn-primary" id="btn-tor-rotation-save" data-i18n="ui.applyInterval">Apply Interval</button>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-secondary tiny" id="btn-rot-300">5m</button>
-        <button class="btn btn-secondary tiny" id="btn-rot-600">10m</button>
-        <button class="btn btn-secondary tiny" id="btn-rot-1800">30m</button>
-        <button class="btn btn-secondary tiny" id="btn-rot-3600">1h</button>
-      </div>
-      <p class="hint" data-i18n="ui.rotationHint">Lower values rotate more often. Higher values keep circuits longer.</p>
-      <p class="feedback" id="tor-rotation-feedback"></p>
-    </div>
-  </section>
+  <div class="sidebar-footer">
+    <a href="https://ia.mundix.dev" target="_blank" class="brand-link">ia.mundix.dev</a>
+    <div class="brand-credit">@mundix.cli</div>
+  </div>
+</aside>
 
-  <section class="grid-3">
-    <div class="card">
-      <h2 data-i18n="ui.cpuUsage">CPU Usage</h2>
-      <div class="progress-wrap"><div class="progress-bar" id="cpu-bar"></div></div>
-      <p class="stat-label"><span id="cpu-val">—</span>%</p>
-    </div>
-    <div class="card">
-      <h2 data-i18n="ui.memoryUsage">Memory Usage</h2>
-      <div class="progress-wrap"><div class="progress-bar" id="mem-bar"></div></div>
-      <p class="stat-label"><span id="mem-val">—</span>% (<span id="mem-used">—</span> / <span id="mem-total">—</span> MB)</p>
-    </div>
-    <div class="card">
-      <h2 data-i18n="ui.diskUsage">Disk Usage (/)</h2>
-      <div class="progress-wrap"><div class="progress-bar" id="disk-bar"></div></div>
-      <p class="stat-label"><span id="disk-val">—</span>% (<span id="disk-used">—</span> / <span id="disk-total">—</span> GB)</p>
-    </div>
-  </section>
+<div class="overlay" id="sidebar-overlay"></div>
 
-  <section>
-    <div class="card">
-      <h2 data-i18n="ui.geoMap">Tor Exit GeoIP Map</h2>
-      <div id="geoip-meta" class="hint" data-i18n="ui.locationUnavailable">Location unavailable.</div>
-      <div id="geoip-map-wrap">
-        <iframe id="geoip-map-frame" title="Tor Exit GeoIP Map" loading="lazy" referrerpolicy="no-referrer"></iframe>
-      </div>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">☰</button>
+    <div class="topbar-title" data-i18n="nav.overview">Overview</div>
+    <div class="topbar-tools">
+      <button class="lang-btn" id="lang-en" title="English (US)" data-i18n-title="ui.langEnTitle">🇺🇸</button>
+      <button class="lang-btn" id="lang-pt" title="Português (Brasil)" data-i18n-title="ui.langPtTitle">🇧🇷</button>
+      <span id="clock" class="clock">--:--:--</span>
     </div>
-  </section>
+  </header>
 
-  <section class="grid-2">
-    <div class="card">
-      <h2 data-i18n="ui.servicesMonitor">Services Monitor</h2>
-      <table class="net-table">
-        <thead><tr><th data-i18n="ui.service">Service</th><th data-i18n="ui.active">Active</th><th data-i18n="ui.enabled">Enabled</th><th data-i18n="ui.actions">Actions</th></tr></thead>
-        <tbody id="services-tbody"></tbody>
-      </table>
-      <p class="feedback" id="services-feedback"></p>
-    </div>
-    <div class="card">
-      <h2 data-i18n="ui.routerControls">Router Controls</h2>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btn-router-start" data-i18n="ui.start">Start</button>
-        <button class="btn btn-warn" id="btn-router-restart" data-i18n="ui.restart">Restart</button>
-        <button class="btn btn-danger" id="btn-router-stop" data-i18n="ui.stop">Stop</button>
+  <main>
+    <!-- OVERVIEW -->
+    <section id="section-overview" class="section active">
+      <div class="page-header">
+        <h1 data-i18n="nav.overview">Overview</h1>
+        <p class="page-desc" data-i18n="overview.desc">Real-time status of your Tor Security Router.</p>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btn-new-circuit" data-i18n="ui.newCircuit">🔄 New Circuit</button>
-        <button class="btn btn-secondary" id="btn-restart-tor" data-i18n="ui.restartTor">↺ Restart Tor</button>
-        <button class="btn btn-secondary" id="btn-firewall-reload" data-i18n="ui.reloadFirewall">Reload Firewall</button>
-      </div>
-      <p class="feedback" id="router-feedback"></p>
-    </div>
-  </section>
 
-  <section>
-    <div class="card">
-      <h2 data-i18n="ui.troubleshoot">Troubleshoot (Tor LAN)</h2>
-      <div class="btn-row">
-        <button class="btn btn-secondary" id="btn-trbl-check" data-i18n="ui.runDiagnostics">Run Diagnostics</button>
-        <button class="btn btn-warn" id="btn-trbl-fix-dns" data-i18n="ui.fixDnsChain">Fix DNS/Tor Chain</button>
-        <button class="btn btn-warn" id="btn-trbl-fix-firewall" data-i18n="ui.reapplyFirewall">Reapply Firewall</button>
-        <button class="btn btn-primary" id="btn-trbl-fix-stack" data-i18n="ui.restartRouterStack">Restart Router Stack</button>
-        <button class="btn btn-danger" id="btn-trbl-fix-full" data-i18n="ui.fullRecovery">Full Recovery</button>
+      <div class="grid-4">
+        <div class="card stat-card">
+          <div class="stat-label" data-i18n="ui.torExitIp">Tor Exit IP</div>
+          <div class="big-value" id="tor-exit-ip">—</div>
+          <div class="hint" id="tor-exit-meta"></div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label" data-i18n="ui.torBootstrap">Tor Bootstrap</div>
+          <div class="big-value" id="tor-bootstrap">—</div>
+          <div class="hint" id="tor-bootstrap-phase"></div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label" data-i18n="ui.wanState">WAN State</div>
+          <div class="big-value" id="wan-state">—</div>
+          <div class="hint" id="wan-hint"></div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label" data-i18n="ui.uptime">Uptime</div>
+          <div class="big-value" id="sys-uptime">—</div>
+          <div class="hint" id="sys-hostname"></div>
+        </div>
       </div>
-      <pre id="trbl-output" class="logs-box" data-i18n="ui.trblDefault">Click "Run Diagnostics" when Tor LAN clients cannot browse.</pre>
-      <p class="feedback" id="trbl-feedback"></p>
-    </div>
-  </section>
 
-  <section class="grid-2">
-    <div class="card">
-      <h2 data-i18n="ui.interfacesTraffic">Interfaces & Traffic</h2>
-      <table class="net-table">
-        <thead><tr><th data-i18n="ui.interface">Interface</th><th data-i18n="ui.state">State</th><th>IPv4</th><th>RX MB</th><th>TX MB</th></tr></thead>
-        <tbody id="net-tbody"></tbody>
-      </table>
-    </div>
-    <div class="card">
-      <h2 data-i18n="ui.dhcpClients">DHCP Clients</h2>
-      <table class="net-table">
-        <thead><tr><th>IP</th><th data-i18n="ui.hostname">Hostname</th><th>MAC</th><th data-i18n="ui.network">Network</th></tr></thead>
-        <tbody id="clients-tbody"></tbody>
-      </table>
-    </div>
-  </section>
+      <div class="grid-3">
+        <div class="card">
+          <div class="stat-label" data-i18n="ui.cpuUsage">CPU Usage</div>
+          <div class="progress-wrap"><div class="progress-bar" id="cpu-bar"></div></div>
+          <div class="stat-value"><span id="cpu-val">—</span>%</div>
+        </div>
+        <div class="card">
+          <div class="stat-label" data-i18n="ui.memoryUsage">Memory Usage</div>
+          <div class="progress-wrap"><div class="progress-bar" id="mem-bar"></div></div>
+          <div class="stat-value"><span id="mem-val">—</span>% (<span id="mem-used">—</span> / <span id="mem-total">—</span> MB)</div>
+        </div>
+        <div class="card">
+          <div class="stat-label" data-i18n="ui.diskUsage">Disk Usage (/)</div>
+          <div class="progress-wrap"><div class="progress-bar" id="disk-bar"></div></div>
+          <div class="stat-value"><span id="disk-val">—</span>% (<span id="disk-used">—</span> / <span id="disk-total">—</span> GB)</div>
+        </div>
+      </div>
 
-  <section class="grid-3">
-    <div class="card stat-card"><h2 data-i18n="ui.dnsQueriesToday">DNS Queries Today</h2><div class="big-value" id="ph-total">—</div></div>
-    <div class="card stat-card"><h2 data-i18n="ui.blockedToday">Blocked Today</h2><div class="big-value" id="ph-blocked">—</div></div>
-    <div class="card stat-card"><h2 data-i18n="ui.blockRate">Block Rate</h2><div class="big-value" id="ph-pct">—</div></div>
-  </section>
+      <div class="grid-2">
+        <div class="card">
+          <h2 data-i18n="overview.quickStats">Quick Stats</h2>
+          <div class="grid-3">
+            <div class="mini-stat">
+              <div class="mini-label" data-i18n="ui.dnsQueriesToday">DNS Queries</div>
+              <div class="mini-value" id="ph-total">—</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-label" data-i18n="ui.blockedToday">Blocked</div>
+              <div class="mini-value" id="ph-blocked">—</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-label" data-i18n="ui.blockRate">Block Rate</div>
+              <div class="mini-value" id="ph-pct">—</div>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:16px">
+            <div class="mini-stat">
+              <div class="mini-label" data-i18n="overview.dhcpClients">DHCP Clients</div>
+              <div class="mini-value" id="ov-clients">—</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-label" data-i18n="overview.vpnStatus">VPN</div>
+              <div class="mini-value" id="ov-vpn">—</div>
+            </div>
+          </div>
+        </div>
 
-  <section class="grid-2">
-    <div class="card">
-      <h2 data-i18n="ui.wifiApRouter">Wi-Fi SSID Router</h2>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.wifiInterface">Wi-Fi interface:</span>
-          <select id="wifi-ap-iface">
-            <option value="" data-i18n="ui.autoSelect">Auto-select available</option>
-          </select>
-        </label>
-        <label><span data-i18n="ui.routeProfile">Route profile:</span>
-          <select id="wifi-ap-route">
-            <option value="10" data-i18n="ui.route10">192.168.10.x (normal)</option>
-            <option value="20" data-i18n="ui.route20">192.168.20.x (Tor)</option>
-            <option value="30" data-i18n="ui.route30">192.168.30.x (Tor)</option>
-          </select>
-        </label>
+        <div class="card">
+          <h2 data-i18n="ui.routerControls">Quick Controls</h2>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-router-start" data-i18n="ui.start">Start</button>
+            <button class="btn btn-warn" id="btn-router-restart" data-i18n="ui.restart">Restart</button>
+            <button class="btn btn-danger" id="btn-router-stop" data-i18n="ui.stop">Stop</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-new-circuit" data-i18n="ui.newCircuit">New Circuit</button>
+            <button class="btn btn-secondary" id="btn-firewall-reload" data-i18n="ui.reloadFirewall">Reload Firewall</button>
+          </div>
+          <p class="feedback" id="router-feedback"></p>
+        </div>
       </div>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.ssidName">SSID name:</span>
-          <input type="text" id="wifi-ap-ssid" maxlength="32" placeholder="TorRouterWiFi">
-        </label>
-        <label><span data-i18n="ui.wifiPassword">Wi-Fi password:</span>
-          <input type="password" id="wifi-ap-password" minlength="8" maxlength="63" placeholder="min 8 chars">
-        </label>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btn-wifi-ap-start" data-i18n="ui.startWifiAp">Start SSID</button>
-        <button class="btn btn-danger" id="btn-wifi-ap-stop" data-i18n="ui.stopWifiAp">Stop SSID</button>
-      </div>
-      <p class="hint" id="wifi-ap-status" data-i18n="ui.wifiApStatusIdle">SSID service is stopped.</p>
-      <p class="feedback" id="wifi-ap-feedback"></p>
-    </div>
+    </section>
 
-    <div class="card">
-      <h2 data-i18n="ui.wanManagement">WAN Management</h2>
-      <label><span data-i18n="ui.primaryWan">Primary WAN:</span>
-        <select id="wan-select">
-          <option value="eth0" data-i18n="ui.wan1">eth0 (WAN 1)</option>
-          <option value="wlan0" data-i18n="ui.wan2">wlan0 (WAN 2)</option>
-        </select>
-      </label>
-      <button class="btn btn-primary" id="btn-set-wan" data-i18n="ui.apply">Apply</button>
-      <p class="feedback" id="wan-feedback"></p>
-      <h2 class="sub-title" data-i18n="ui.vpnControl">VPN Control</h2>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.profile">Profile:</span>
-          <select id="vpn-profile-select"><option value="" data-i18n="ui.selectOption">— select —</option></select>
-        </label>
-        <button class="btn btn-primary" id="btn-vpn-connect" data-i18n="ui.connect">Connect</button>
-        <button class="btn btn-danger" id="btn-vpn-disconnect" data-i18n="ui.disconnect">Disconnect</button>
+    <!-- TOR -->
+    <section id="section-tor" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.tor">Tor</h1>
+        <p class="page-desc" data-i18n="tor.desc">Tor circuit status, geo-location and rotation settings.</p>
       </div>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.uploadProfile">Upload profile (.conf/.ovpn):</span>
-          <input type="file" id="vpn-file-input" accept=".conf,.ovpn">
-        </label>
-        <button class="btn btn-secondary" id="btn-vpn-upload" data-i18n="ui.upload">Upload</button>
-      </div>
-      <p class="feedback" id="vpn-feedback"></p>
-    </div>
-    <div class="card">
-      <h2 data-i18n="ui.logs">Logs</h2>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.service">Service:</span>
-          <select id="logs-service">
-            <option value="router">router</option>
-            <option value="tor">tor</option>
-            <option value="dnsmasq">dnsmasq</option>
-            <option value="nginx">nginx</option>
-            <option value="pihole">pihole</option>
-            <option value="wan">wan</option>
-            <option value="ssh">ssh</option>
-          </select>
-        </label>
-        <button class="btn btn-secondary" id="btn-load-logs" data-i18n="ui.loadLogs">Load Logs</button>
-      </div>
-      <pre id="logs-output" class="logs-box" data-i18n="ui.logsDefault">Select a service and click "Load Logs".</pre>
-      <p class="feedback" id="logs-feedback"></p>
-    </div>
-  </section>
 
-  <section>
-    <div class="card">
-      <h2 data-i18n="ui.configEditor">Configuration Editor</h2>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.configFile">Config file:</span>
-          <select id="config-key">
-            <option value="torrc">Tor (torrc)</option>
-            <option value="dnsmasq">dnsmasq.conf</option>
-            <option value="nginx_dashboard">nginx dashboard</option>
-            <option value="firewall">firewall.sh</option>
-            <option value="wan_manager">wan_manager.sh</option>
-            <option value="sshd_tor">ssh tor-access.conf</option>
-            <option value="pihole_toml">Pi-hole pihole.toml</option>
-          </select>
-        </label>
-        <button class="btn btn-secondary" id="btn-config-load" data-i18n="ui.load">Load</button>
-      </div>
-      <textarea id="config-content" class="config-editor" spellcheck="false"></textarea>
-      <div class="vpn-row">
-        <label><span data-i18n="ui.applyAfterSave">Apply after save:</span>
-          <select id="config-apply">
-            <option value="none">none</option>
-            <option value="restart_tor">restart tor</option>
-            <option value="restart_dnsmasq">restart dnsmasq</option>
-            <option value="reload_nginx">reload nginx</option>
-            <option value="restart_pihole">restart pihole</option>
-            <option value="apply_firewall">apply firewall</option>
-            <option value="restart_wan">restart wan</option>
-            <option value="restart_ssh">restart ssh</option>
-            <option value="restart_router">restart router</option>
-          </select>
-        </label>
-        <button class="btn btn-primary" id="btn-config-save" data-i18n="ui.saveConfig">Save Config</button>
-      </div>
-      <p class="feedback" id="config-feedback"></p>
-    </div>
-  </section>
+      <div class="grid-2">
+        <div class="card">
+          <h2 data-i18n="ui.geoMap">Tor Exit GeoIP Map</h2>
+          <div id="geoip-meta" class="hint" data-i18n="ui.locationUnavailable">Location unavailable.</div>
+          <div id="geoip-map-wrap">
+            <iframe id="geoip-map-frame" title="Tor Exit GeoIP Map" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          </div>
+        </div>
+        <div class="card">
+          <h2 data-i18n="ui.torRotation">Tor IP Rotation Interval</h2>
+          <div class="form-row">
+            <label><span data-i18n="ui.current">Current:</span>
+              <input id="tor-rotation-current" type="text" readonly value="—">
+            </label>
+            <label><span data-i18n="ui.setInterval">Set interval (seconds):</span>
+              <input id="tor-rotation-seconds" type="number" min="10" max="86400" step="10" value="600">
+            </label>
+            <button class="btn btn-primary" id="btn-tor-rotation-save" data-i18n="ui.applyInterval">Apply</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary tiny" id="btn-rot-300">5m</button>
+            <button class="btn btn-secondary tiny" id="btn-rot-600">10m</button>
+            <button class="btn btn-secondary tiny" id="btn-rot-1800">30m</button>
+            <button class="btn btn-secondary tiny" id="btn-rot-3600">1h</button>
+          </div>
+          <p class="hint" data-i18n="ui.rotationHint">Lower values rotate more often. Higher values keep circuits longer.</p>
+          <p class="feedback" id="tor-rotation-feedback"></p>
 
-  <!-- Pentest Toolkit Link -->
-  <section>
-    <div class="card" style="text-align:center">
-      <h2>🛡️ <span data-i18n="ui.pentestToolkit">Pentest Toolkit</span></h2>
-      <p class="hint" data-i18n="ui.pentestDesc">Wi-Fi security audit: network scanner, traffic auditor, device fingerprinting</p>
-      <a href="/pentest/" target="_blank" class="btn btn-primary" style="margin-top:10px;font-size:1rem;padding:10px 30px">
-        🛡️ <span data-i18n="ui.openPentest">Open Pentest Toolkit</span>
-      </a>
-    </div>
-  </section>
+          <h2 class="sub-title" data-i18n="tor.actions">Tor Actions</h2>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-restart-tor" data-i18n="ui.restartTor">Restart Tor</button>
+            <button class="btn btn-secondary" id="btn-new-circuit-2" data-i18n="ui.newCircuit">New Circuit</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-</main>
+    <!-- NETWORK -->
+    <section id="section-network" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.network">Network</h1>
+        <p class="page-desc" data-i18n="network.desc">Interfaces, DHCP leases and WAN management.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2 data-i18n="ui.interfacesTraffic">Interfaces & Traffic</h2>
+          <table class="net-table">
+            <thead><tr><th data-i18n="ui.interface">Interface</th><th data-i18n="ui.state">State</th><th>IPv4</th><th>RX MB</th><th>TX MB</th></tr></thead>
+            <tbody id="net-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h2 data-i18n="ui.dhcpClients">DHCP Clients</h2>
+          <table class="net-table">
+            <thead><tr><th>IP</th><th data-i18n="ui.hostname">Hostname</th><th>MAC</th><th data-i18n="ui.network">Network</th></tr></thead>
+            <tbody id="clients-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:480px">
+        <h2 data-i18n="ui.wanManagement">WAN Management</h2>
+        <div class="form-row">
+          <label><span data-i18n="ui.primaryWan">Primary WAN:</span>
+            <select id="wan-select">
+              <option value="eth0" data-i18n="ui.wan1">eth0 (WAN 1)</option>
+              <option value="wlan0" data-i18n="ui.wan2">wlan0 (WAN 2)</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" id="btn-set-wan" data-i18n="ui.apply">Apply</button>
+        </div>
+        <p class="feedback" id="wan-feedback"></p>
+      </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section id="section-services" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.services">Services</h1>
+        <p class="page-desc" data-i18n="services.desc">Monitor and control managed services.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2 data-i18n="ui.servicesMonitor">Services Monitor</h2>
+          <table class="net-table">
+            <thead><tr><th data-i18n="ui.service">Service</th><th data-i18n="ui.active">Active</th><th data-i18n="ui.enabled">Enabled</th><th data-i18n="ui.actions">Actions</th></tr></thead>
+            <tbody id="services-tbody"></tbody>
+          </table>
+          <p class="feedback" id="services-feedback"></p>
+        </div>
+
+        <div class="card">
+          <h2 data-i18n="ui.troubleshoot">Troubleshoot</h2>
+          <p class="hint" data-i18n="ui.trblDefault">Click "Run Diagnostics" when Tor LAN clients cannot browse.</p>
+          <div class="btn-row">
+            <button class="btn btn-secondary" id="btn-trbl-check" data-i18n="ui.runDiagnostics">Run Diagnostics</button>
+            <button class="btn btn-warn" id="btn-trbl-fix-dns" data-i18n="ui.fixDnsChain">Fix DNS/Tor</button>
+            <button class="btn btn-warn" id="btn-trbl-fix-firewall" data-i18n="ui.reapplyFirewall">Reapply FW</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-trbl-fix-stack" data-i18n="ui.restartRouterStack">Restart Stack</button>
+            <button class="btn btn-danger" id="btn-trbl-fix-full" data-i18n="ui.fullRecovery">Full Recovery</button>
+          </div>
+          <pre id="trbl-output" class="logs-box" data-i18n="ui.trblDefault">Click "Run Diagnostics" when Tor LAN clients cannot browse.</pre>
+          <p class="feedback" id="trbl-feedback"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WI-FI AP -->
+    <section id="section-wifi" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.wifi">Wi-Fi AP</h1>
+        <p class="page-desc" data-i18n="wifi.desc">Create a Wi-Fi network routed through normal or Tor profiles.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2 data-i18n="ui.wifiApRouter">Wi-Fi SSID Router</h2>
+          <div class="form-row">
+            <label><span data-i18n="ui.wifiInterface">Wi-Fi interface:</span>
+              <select id="wifi-ap-iface"><option value="" data-i18n="ui.autoSelect">Auto-select available</option></select>
+            </label>
+            <label><span data-i18n="ui.routeProfile">Route profile:</span>
+              <select id="wifi-ap-route">
+                <option value="10" data-i18n="ui.route10">192.168.10.x (normal)</option>
+                <option value="20" data-i18n="ui.route20">192.168.20.x (Tor)</option>
+                <option value="30" data-i18n="ui.route30">192.168.30.x (Tor)</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label><span data-i18n="ui.ssidName">SSID name:</span>
+              <input type="text" id="wifi-ap-ssid" maxlength="32" placeholder="TorRouterWiFi">
+            </label>
+            <label><span data-i18n="ui.wifiPassword">Wi-Fi password:</span>
+              <input type="password" id="wifi-ap-password" minlength="8" maxlength="63" placeholder="min 8 chars">
+            </label>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-wifi-ap-start" data-i18n="ui.startWifiAp">Start SSID</button>
+            <button class="btn btn-danger" id="btn-wifi-ap-stop" data-i18n="ui.stopWifiAp">Stop SSID</button>
+          </div>
+          <p class="hint" id="wifi-ap-status" data-i18n="ui.wifiApStatusIdle">SSID service is stopped.</p>
+          <p class="feedback" id="wifi-ap-feedback"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VPN -->
+    <section id="section-vpn" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.vpn">VPN</h1>
+        <p class="page-desc" data-i18n="vpn.desc">Connect, disconnect and upload VPN profiles.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2 data-i18n="ui.vpnControl">VPN Control</h2>
+          <div class="form-row">
+            <label><span data-i18n="ui.profile">Profile:</span>
+              <select id="vpn-profile-select"><option value="" data-i18n="ui.selectOption">— select —</option></select>
+            </label>
+            <button class="btn btn-primary" id="btn-vpn-connect" data-i18n="ui.connect">Connect</button>
+            <button class="btn btn-danger" id="btn-vpn-disconnect" data-i18n="ui.disconnect">Disconnect</button>
+          </div>
+          <div class="form-row">
+            <label><span data-i18n="ui.uploadProfile">Upload profile (.conf/.ovpn):</span>
+              <input type="file" id="vpn-file-input" accept=".conf,.ovpn">
+            </label>
+            <button class="btn btn-secondary" id="btn-vpn-upload" data-i18n="ui.upload">Upload</button>
+          </div>
+          <p class="feedback" id="vpn-feedback"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BYPASS -->
+    <section id="section-bypass" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.bypass">Clearnet Bypass</h1>
+        <p class="page-desc" data-i18n="bypass.desc">Destinations on Tor LANs that should route directly through WAN.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2 data-i18n="ui.bypassList">Bypass List</h2>
+          <div class="form-row">
+            <label><span data-i18n="ui.bypassEntry">Domain / IP / CIDR:</span>
+              <input type="text" id="bypass-entry" placeholder="example.com  or  1.1.1.1  or  192.168.0.0/16">
+            </label>
+            <button class="btn btn-primary" id="btn-bypass-add" data-i18n="ui.add">Add</button>
+          </div>
+          <p class="feedback" id="bypass-feedback"></p>
+          <table class="net-table">
+            <thead><tr><th data-i18n="ui.bypassEntry">Entry</th><th data-i18n="ui.actions">Actions</th></tr></thead>
+            <tbody id="bypass-tbody"></tbody>
+          </table>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn btn-secondary" id="btn-bypass-apply" data-i18n="ui.reapplyList">Reapply / Resolve</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2 data-i18n="ui.bypassActiveIps">Active Bypass IPs</h2>
+          <p class="hint" data-i18n="ui.bypassActiveDesc">Resolved IPv4 addresses currently allowed to bypass Tor on eth2/eth3.</p>
+          <ul id="bypass-active-ips" class="logs-box" style="max-height:260px"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOGS -->
+    <section id="section-logs" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.logs">Logs</h1>
+        <p class="page-desc" data-i18n="logs.desc">Inspect logs from managed services.</p>
+      </div>
+
+      <div class="card">
+        <div class="form-row">
+          <label><span data-i18n="ui.service">Service:</span>
+            <select id="logs-service">
+              <option value="router">router</option>
+              <option value="tor">tor</option>
+              <option value="dnsmasq">dnsmasq</option>
+              <option value="nginx">nginx</option>
+              <option value="pihole">pihole</option>
+              <option value="wan">wan</option>
+              <option value="ssh">ssh</option>
+            </select>
+          </label>
+          <button class="btn btn-secondary" id="btn-load-logs" data-i18n="ui.loadLogs">Load Logs</button>
+        </div>
+        <pre id="logs-output" class="logs-box" data-i18n="ui.logsDefault">Select a service and click "Load Logs".</pre>
+        <p class="feedback" id="logs-feedback"></p>
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="section-config" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.config">Config</h1>
+        <p class="page-desc" data-i18n="config.desc">Edit configuration files and apply changes.</p>
+      </div>
+
+      <div class="card">
+        <div class="form-row">
+          <label><span data-i18n="ui.configFile">Config file:</span>
+            <select id="config-key">
+              <option value="torrc">Tor (torrc)</option>
+              <option value="dnsmasq">dnsmasq.conf</option>
+              <option value="nginx_dashboard">nginx dashboard</option>
+              <option value="firewall">firewall.sh</option>
+              <option value="wan_manager">wan_manager.sh</option>
+              <option value="sshd_tor">ssh tor-access.conf</option>
+              <option value="pihole_toml">Pi-hole pihole.toml</option>
+            </select>
+          </label>
+          <button class="btn btn-secondary" id="btn-config-load" data-i18n="ui.load">Load</button>
+        </div>
+        <textarea id="config-content" class="config-editor" spellcheck="false"></textarea>
+        <div class="form-row">
+          <label><span data-i18n="ui.applyAfterSave">Apply after save:</span>
+            <select id="config-apply">
+              <option value="none">none</option>
+              <option value="restart_tor">restart tor</option>
+              <option value="restart_dnsmasq">restart dnsmasq</option>
+              <option value="reload_nginx">reload nginx</option>
+              <option value="restart_pihole">restart pihole</option>
+              <option value="apply_firewall">apply firewall</option>
+              <option value="restart_wan">restart wan</option>
+              <option value="restart_ssh">restart ssh</option>
+              <option value="restart_router">restart router</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" id="btn-config-save" data-i18n="ui.saveConfig">Save Config</button>
+        </div>
+        <p class="feedback" id="config-feedback"></p>
+      </div>
+    </section>
+
+    <!-- PENTEST / WI-FI SECURITY AUDIT -->
+    <section id="section-pentest" class="section">
+      <div class="page-header">
+        <h1 data-i18n="nav.pentest">Wi-Fi Security Audit Suite</h1>
+        <p class="page-desc" data-i18n="pentest.desc">Wi-Fi security audit: network scanner, traffic auditor and device fingerprinting.</p>
+      </div>
+
+      <div class="card pentest-frame-card">
+        <div class="form-row" style="margin-bottom:0">
+          <button class="btn btn-secondary" id="btn-pentest-refresh" data-i18n="pentest.refreshFrame">Reload Tool</button>
+          <span class="hint" data-i18n="pentest.hint">The audit suite runs in an isolated frame below.</span>
+        </div>
+        <div class="pentest-frame-wrap">
+          <iframe id="pentest-frame" src="/pentest/" title="Wi-Fi Security Audit Suite" loading="lazy"></iframe>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script src="/assets/app.js"></script>
 </body>

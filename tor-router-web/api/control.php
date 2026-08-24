@@ -19,6 +19,8 @@ $SERVICE_UNITS = [
     'php_fpm'      => 'php8.4-fpm',
     'wan_failover' => 'wan-failover',
     'ssh'          => 'ssh',
+    'hostapd'      => 'hostapd',
+    'pentest'      => 'trs-pentest',
 ];
 
 $CONFIG_FILES = [
@@ -194,6 +196,43 @@ switch ($action) {
         if (!in_array($op, ['start', 'stop', 'restart'], true)) {
             json_response(false, 'Invalid operation.');
         }
+        // Wi-Fi AP needs special handling via manager script
+        if ($service === 'hostapd' && $op === 'restart') {
+            $stateFile = '/run/tor-router/wifi-ap.state';
+            if (file_exists($stateFile)) {
+                $state = parse_ini_file($stateFile);
+                $iface = $state['iface'] ?? 'wlan0';
+                $ssid = $state['ssid'] ?? 'TorRouterWiFi';
+                $route = $state['route'] ?? '20';
+                // Read password from hostapd conf
+                $pass = 'torrouter';
+                $hapd = '/etc/tor-router/wifi-ap/hostapd.conf';
+                if (file_exists($hapd)) {
+                    foreach (file($hapd) as $l) {
+                        if (str_starts_with($l, 'wpa_passphrase='))
+                            $pass = trim(substr($l, 15));
+                    }
+                }
+                // Stop then start
+                run_cmd("sudo $WIFI_AP_MANAGER stop");
+                sleep(1);
+                [$ok, $msg] = run_cmd("sudo $WIFI_AP_MANAGER start " .
+                    escapeshellarg($iface) . ' ' . escapeshellarg($ssid) . ' ' .
+                    escapeshellarg($pass) . ' ' . escapeshellarg($route));
+                sleep(1);
+                run_cmd("sudo /usr/local/bin/firewall.sh");
+                json_response($ok, $ok ? 'Wi-Fi AP restarted.' : "Wi-Fi AP restart failed: $msg");
+            } else {
+                json_response(false, 'Wi-Fi AP is not running. Use the Wi-Fi SSID Router card to start it.');
+            }
+            break;
+        }
+        if ($service === 'hostapd' && $op === 'stop') {
+            [$ok, $msg] = run_cmd("sudo $WIFI_AP_MANAGER stop");
+            run_cmd("sudo /usr/local/bin/firewall.sh");
+            json_response($ok, $ok ? 'Wi-Fi AP stopped.' : $msg);
+            break;
+        }
         $unit = $SERVICE_UNITS[$service];
         [$ok, $msg] = run_cmd("sudo /usr/bin/systemctl $op " . escapeshellarg($unit));
         json_response($ok, $ok ? "$service $op successful." : $msg);
@@ -367,6 +406,9 @@ switch ($action) {
             'wan' => 'wan-failover',
             'router' => 'tor-router',
             'ssh' => 'ssh',
+            'hostapd' => 'hostapd',
+            'pentest' => 'trs-pentest',
+            'dnscrypt' => 'dnscrypt-proxy',
         ];
         if (!isset($map[$service])) {
             json_response(false, 'Invalid log target.');
@@ -454,6 +496,38 @@ switch ($action) {
         }
 
         json_response(true, 'Config saved successfully.', ['backup' => $backup, 'output' => $applyOutput]);
+        break;
+
+    // ---- Clearnet bypass list ----
+    case 'bypass_list':
+        [$ok, $msg] = run_cmd("sudo /usr/local/bin/tor-router.d/bypass_manager.sh list");
+        json_response($ok, $ok ? 'Bypass list loaded.' : $msg, ['output' => $msg]);
+        break;
+
+    case 'bypass_add':
+        $entry = trim((string)($body['entry'] ?? ''));
+        if ($entry === '') {
+            json_response(false, 'Entry is required (domain, IP or CIDR).');
+        }
+        if (!preg_match('/^([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$|^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(\/[0-9]+)?$/', $entry)) {
+            json_response(false, 'Invalid entry. Use a domain, IPv4 or CIDR.');
+        }
+        [$ok, $msg] = run_cmd("sudo /usr/local/bin/tor-router.d/bypass_manager.sh add " . escapeshellarg($entry));
+        json_response($ok, $ok ? "Added '$entry' to bypass list." : $msg, ['output' => $msg]);
+        break;
+
+    case 'bypass_remove':
+        $entry = trim((string)($body['entry'] ?? ''));
+        if ($entry === '') {
+            json_response(false, 'Entry is required.');
+        }
+        [$ok, $msg] = run_cmd("sudo /usr/local/bin/tor-router.d/bypass_manager.sh remove " . escapeshellarg($entry));
+        json_response($ok, $ok ? "Removed '$entry' from bypass list." : $msg, ['output' => $msg]);
+        break;
+
+    case 'bypass_apply':
+        [$ok, $msg] = run_cmd("sudo /usr/local/bin/tor-router.d/bypass_manager.sh apply");
+        json_response($ok, $ok ? 'Bypass list reapplied.' : $msg, ['output' => $msg]);
         break;
 
     default:
